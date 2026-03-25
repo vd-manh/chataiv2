@@ -1,6 +1,14 @@
-__import__('pysqlite3')
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    # Nếu chạy local (Windows/Mac) không có pysqlite3 thì bỏ qua
+    pass
+
+import streamlit as st
+# ... các dòng import phía sau giữ nguyên
 import os
 import uuid
 import shutil
