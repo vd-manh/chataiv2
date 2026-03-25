@@ -1,5 +1,5 @@
 import sys
-# 1. ÉP DÙNG PYSQLITE3 (PHẢI LÀ DÒNG ĐẦU TIÊN)
+# 1. ÉP DÙNG PYSQLITE3 (DÒNG ĐẦU TIÊN)
 try:
     __import__('pysqlite3')
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -10,7 +10,6 @@ except ImportError:
 import os
 import uuid
 import shutil
-from datetime import datetime
 import streamlit as st  
 
 # 3. CẤU HÌNH TRANG
@@ -21,33 +20,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- THIẾT KẾ GIAO DIỆN (CSS CUSTOM) ---
+# --- THIẾT KẾ GIAO DIỆN (CSS) ---
 st.markdown("""
     <style>
     .stApp { color: var(--text-color); }
-    .chat-header h1 {
-        text-align: center;
-        padding-bottom: 1.5rem;
-        font-weight: 800;
-        color: inherit; 
-    }
-    .stChatMessage {
-        border-radius: 15px;
-        margin-bottom: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.1);
-    }
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 10rem;
-    }
+    .chat-header h1 { text-align: center; padding-bottom: 1.5rem; font-weight: 800; }
+    .stChatMessage { border-radius: 15px; margin-bottom: 10px; border: 1px solid rgba(128, 128, 128, 0.1); }
+    .block-container { padding-top: 2rem; padding-bottom: 10rem; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- IMPORT CÁC MODULE ---
 from app_config import load_project_env, resolve_device, get_unified_vector_db_path
-from chatbot_utility import get_chapter_list
 from get_yt_video import get_yt_video_link
-from observability import get_logger
 from qa_engine import answer_from_sources
 from fast_ingest import run_ingest 
 from langchain_chroma import Chroma
@@ -61,16 +46,15 @@ parent_dir = load_project_env(working_dir)
 DEVICE = resolve_device()
 UNIFIED_VECTOR_DB_PATH = get_unified_vector_db_path(parent_dir)
 subjects_list = ["Physics", "Chemistry", "Biology", "Math"]
-logger = get_logger()
 
-# --- CÁC HÀM GET RESOURCE (CACHE) ---
+# --- CÁC HÀM CACHE ---
 @st.cache_resource(show_spinner=False)
 def get_embeddings():
     model_name = "paraphrase-multilingual-MiniLM-L12-v2" 
     return HuggingFaceEmbeddings(model_name=model_name, model_kwargs={"device": DEVICE})
 
 def get_vectorstore():
-    # Kiểm tra xem folder DB đã tồn tại và có file bên trong chưa
+    # Kiểm tra xem folder DB đã tồn tại và có dữ liệu chưa
     if not os.path.exists(UNIFIED_VECTOR_DB_PATH) or not os.listdir(UNIFIED_VECTOR_DB_PATH):
         return None
     try:
@@ -100,8 +84,8 @@ LANG = {
     "upload_pdf": "새 PDF 문서 업로드",
     "update_btn": "🚀 시스템 업데이트",
     "clear_btn": "🗑️ 모든 데이터 초기화",
-    "input_placeholder": "문서에 대해 질문하세요...",
-    "welcome_msg": "안녕하세요! 학습 도우mi입니다. 왼쪽에서 PDF를 업로드하고 '🚀 시스템 업데이트'를 클릭하세요.",
+    "input_placeholder": "문서에 về tài liệu nghiên cứu của Mạnh...",
+    "welcome_msg": "안녕하세요! 학습 도우미입니다. PDF를 업로드하고 '🚀 시스템 업데이트'를 클릭하세요.",
     "tab_ans": "💡 답변",
     "tab_src": "📄 참고 문헌",
     "tab_vid": "🎥 추천 영상",
@@ -112,14 +96,9 @@ LANG = {
 }
 
 # --- KHỞI TẠO SESSION STATE ---
-for key in ["chat_history", "video_history", "citation_history", "session_id", "active_vectorstore"]:
+for key in ["chat_history", "video_history", "citation_history"]:
     if key not in st.session_state:
-        if key == "active_vectorstore":
-            st.session_state[key] = get_vectorstore()
-        elif "history" in key:
-            st.session_state[key] = []
-        else:
-            st.session_state[key] = uuid.uuid4().hex[:12]
+        st.session_state[key] = []
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -127,11 +106,8 @@ with st.sidebar:
     source_mode_kr = st.radio(LANG["query_mode"], [LANG["mode_subject"], LANG["mode_docs"]], index=1)
     source_mode = "Selected Subjects" if source_mode_kr == LANG["mode_subject"] else "My Documents"
     
-    selected_subject = None
-    selected_chapter = ""
-    if source_mode == "Selected Subjects":
-        selected_subject = st.selectbox(LANG["subject_select"], subjects_list)
-        selected_chapter = st.text_input(LANG["chapter_input"])
+    selected_subject = st.selectbox(LANG["subject_select"], subjects_list) if source_mode == "Selected Subjects" else None
+    selected_chapter = st.text_input(LANG["chapter_input"]) if source_mode == "Selected Subjects" else ""
 
     st.divider()
     st.header(LANG["manage_kb"])
@@ -145,30 +121,22 @@ with st.sidebar:
                 for f in uploaded_files:
                     with open(os.path.join(save_path, f.name), "wb") as pf:
                         pf.write(f.getbuffer())
-                
-                # Chạy nạp dữ liệu
                 num = run_ingest() 
-                
-                # CẬP NHẬT TRỰC TIẾP VÀO SESSION STATE
-                st.session_state.active_vectorstore = get_vectorstore()
                 status.update(label=LANG["status_success"].format(num=num), state="complete")
-            
-            # Ép trình duyệt load lại để biến active_vs phía dưới nhận giá trị mới
             st.rerun()
 
     if st.button(LANG["clear_btn"]):
         st.cache_resource.clear()
-        # Logic xóa folder... (giữ nguyên của Mạnh)
-        st.session_state.active_vectorstore = None
+        shutil.rmtree(os.path.join(parent_dir, "data"), ignore_errors=True)
+        st.session_state.chat_history = []
         st.rerun()
 
 # --- GIAO DIỆN CHAT ---
 st.markdown(f"<div class='chat-header'><h1>{LANG['title']}</h1></div>", unsafe_allow_html=True)
 
-# KIỂM TRA TRẠNG THÁI VECTORSTORE
-active_vs = st.session_state.active_vectorstore
-
-if active_vs is None:
+# KIỂM TRA DỮ LIỆU ĐỂ HIỆN LỜI CHÀO
+temp_vs = get_vectorstore()
+if temp_vs is None:
     st.info(f"💡 {LANG['welcome_msg']}")
 
 def render_assistant_response(ans, cits, vids):
@@ -181,34 +149,31 @@ def render_assistant_response(ans, cits, vids):
     with t3:
         if vids:
             for title, link in vids:
-                col1, col2 = st.columns([1, 2])
-                with col1: st.video(link)
-                with col2: st.caption(f"**{title}**")
+                col1, col2 = st.columns([1, 2]); col1.video(link); col2.caption(f"**{title}**")
 
-# HIỂN THỊ LỊCH SỬ
-assistant_count = 0
-for msg in st.session_state.chat_history:
+# HIỂN THỊ LỊCH SỬ CHAT
+for i, msg in enumerate(st.session_state.chat_history):
     with st.chat_message(msg["role"]):
         if msg["role"] == "assistant":
-            render_assistant_response(
-                msg["content"], 
-                st.session_state.citation_history[assistant_count],
-                st.session_state.video_history[assistant_count]
-            )
-            assistant_count += 1
+            render_assistant_response(msg["content"], st.session_state.citation_history[i//2], st.session_state.video_history[i//2])
         else:
             st.markdown(msg["content"])
 
-# --- Ô NHẬP LIỆU (LUÔN MỞ ĐỂ MẠNH GÕ ĐƯỢC) ---
+# --- PHẦN Ô NHẬP LIỆU QUAN TRỌNG ---
 user_input = st.chat_input(LANG["input_placeholder"])
 
 if user_input:
-    if active_vs is None:
+    # Bước kiểm tra sống còn:
+    active_vs = get_vectorstore()
+    
+    if active_vs is None and source_mode == "My Documents":
         st.warning("⚠️ PDF를 먼저 업로드하고 '시스템 업데이트' 버튼을 눌러주세요!")
     else:
+        # 1. Lưu câu hỏi
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         with st.chat_message("user"): st.markdown(user_input)
 
+        # 2. Xử lý AI
         with st.chat_message("assistant"):
             with st.spinner(LANG["status_search"]):
                 target_subject = selected_subject if source_mode == "Selected Subjects" else "My Documents"
@@ -225,6 +190,7 @@ if user_input:
                     use_metadata_filter=True
                 )
                 
+                # Lấy video
                 current_vids = []
                 try:
                     t, l = get_yt_video_link(user_input)
@@ -232,6 +198,8 @@ if user_input:
                 except: pass
 
             render_assistant_response(ans, cits, current_vids)
+            
+            # 3. Lưu lịch sử
             st.session_state.chat_history.append({"role": "assistant", "content": ans})
             st.session_state.citation_history.append(cits)
             st.session_state.video_history.append(current_vids)
