@@ -1,0 +1,5 @@
+GROQ_API_KEY=your_groq_api_key_here
+
+DEVICE=cpu
+
+CLASS_SUBJECT_NAME=class_12/physics, class_12/chemistry, class_12/biology
