@@ -3,7 +3,9 @@ import uuid
 import shutil
 from datetime import datetime
 import streamlit as st
-
+import pysqlite3
+import sys
+sys.modules["sqlite3"] = pysqlite3
 # --- CẤU HÌNH TRANG (PHẢI ĐẶT ĐẦU TIÊN) ---
 st.set_page_config(
     page_title="VMVM AI", 
