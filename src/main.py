@@ -1,29 +1,28 @@
 import sys
+# 1. ÉP DÙNG PYSQLITE3 (PHẢI LÀ DÒNG ĐẦU TIÊN)
 try:
     __import__('pysqlite3')
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 except ImportError:
     pass
-
-# Tiếp theo mới là các dòng import khác...
-
-import streamlit as st
-# ... các dòng import phía sau giữ nguyên
+# 2. CÁC THƯ VIỆN HỆ THỐNG
 import os
 import uuid
 import shutil
 from datetime import datetime
-import streamlit as st
-import pysqlite3
+import streamlit as st  # Chỉ cần 1 dòng này thôi
 
-
-# --- CẤU HÌNH TRANG (PHẢI ĐẶT ĐẦU TIÊN) ---
+# 3. CẤU HÌNH TRANG (PHẢI ĐẶT TRƯỚC KHI IMPORT MODULE CÁ NHÂN)
 st.set_page_config(
-    page_title="VMVM AI", 
+    page_title="VM AI", 
     page_icon="🎓", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# 4. IMPORT CÁC MODULE CỦA DỰ ÁN
+
+
 
 # --- THIẾT KẾ GIAO DIỆN (CSS CUSTOM) ---
 st.markdown("""
