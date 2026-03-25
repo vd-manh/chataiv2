@@ -9,8 +9,9 @@ def load_project_env(working_dir):
     return str(parent_path)
 
 def resolve_device():
-    # Không cần torch, mặc định dùng cpu cho ổn định trên Cloud
+    # Streamlit Cloud dùng CPU là ổn định nhất
     return "cpu"
 
 def get_unified_vector_db_path(parent_dir):
+    # Đảm bảo đường dẫn này khớp với cấu trúc thư mục data trên GitHub của Mạnh
     return os.path.join(parent_dir, "data", "unified_vector_db")
