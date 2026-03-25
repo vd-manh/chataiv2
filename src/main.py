@@ -146,10 +146,14 @@ with st.sidebar:
                     with open(os.path.join(save_path, f.name), "wb") as pf:
                         pf.write(f.getbuffer())
                 
+                # Chạy nạp dữ liệu
                 num = run_ingest() 
-                # Cập nhật lại vectorstore vào session
+                
+                # CẬP NHẬT TRỰC TIẾP VÀO SESSION STATE
                 st.session_state.active_vectorstore = get_vectorstore()
                 status.update(label=LANG["status_success"].format(num=num), state="complete")
+            
+            # Ép trình duyệt load lại để biến active_vs phía dưới nhận giá trị mới
             st.rerun()
 
     if st.button(LANG["clear_btn"]):
