@@ -6,4 +6,5 @@ langchain-huggingface
 sentence-transformers
 youtube-search
 python-dotenv
-torch
+langchain
+langchain-community
