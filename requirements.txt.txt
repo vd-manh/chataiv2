@@ -5,6 +5,4 @@ langchain-groq
 langchain-huggingface
 sentence-transformers
 youtube-search
-httpx>=0.27.0
-protobuf==3.20.3
 python-dotenv
